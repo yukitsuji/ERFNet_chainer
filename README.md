@@ -1,6 +1,7 @@
 # ERFNet_chainer
 Implementation of ERFNet by chainer  
-Feature Forwarding: Exploiting Encoder Representations for Efficient Semantic Segmentation [link](https://codeac29.github.io/projects/erfnet/index.html)
+ERFNet: Efficient Residual Factorized ConvNet for
+Real-time Semantic Segmentation [link](http://www.robesafe.uah.es/personal/eduardo.romera/pdfs/Romera17tits.pdf)
 ```
 ######## Training by cityscapes ########
 # Calculate class balancing
