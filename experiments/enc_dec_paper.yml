@@ -1,0 +1,197 @@
+# """
+# Blockの中身は基本いじらない
+# Bottleneckの構成を色々試してみる
+#
+# typeでBlockまたはBottleneckを設定できる
+# Bottlenecで対応可能なparamは、Defaultのみ
+# """
+end_trigger: [100000, "iteration"]
+results: results/paper_base
+gpus: [1]
+mode: Train
+seed: 1
+class_weight: ./pretrained_model/mean_weight.npy
+
+model:
+  name: ERFNetBasic
+  pretrained_model:
+    path: # results/enc1_paper/model.npz
+  architecture:
+    initial_block:
+      type: InitialBlock
+      args:
+        in_ch: 3
+        out_ch: 64
+        ksize: 7
+        stride: 2
+        pad: 3
+        psize: 3
+        nobias: True
+
+    resblock:
+      type: ResBlock18
+      args:
+        use_bn: True
+        train: True
+
+    size: [512, 1024]
+    decoder_block4:
+      type: DecoderBlock
+      scale: 5
+      args:
+        in_ch: 512
+        out_ch: 256
+        use_bn: True
+        upsample: 1
+        ksize: 2
+        stride: 2
+        pad: 0
+        residual: False
+
+    decoder_block3:
+      type: DecoderBlock
+      scale: 4
+      args:
+        in_ch: 256
+        out_ch: 128
+        use_bn: True
+        upsample: 1
+        ksize: 2
+        stride: 2
+        pad: 0
+        residual: False
+
+    decoder_block2:
+      type: DecoderBlock
+      scale: 3
+      args:
+        in_ch: 128
+        out_ch: 64
+        use_bn: True
+        upsample: 1
+        ksize: 2
+        stride: 2
+        pad: 0
+        residual: False
+
+    decoder_block1:
+      type: DecoderBlock
+      scale: 2
+      args:
+        in_ch: 64
+        out_ch: 64
+        use_bn: True
+        ksize: 3
+        stride: 1
+        pad: 1
+        residual: False
+
+    finalblock1:
+      type: ConvBNReLU
+      args:
+        in_ch: 64
+        out_ch: 32
+        upsample: True
+        ksize: 2
+        stride: 2
+        pad: 0
+
+    finalblock2:
+      type: ConvBNReLU
+      args:
+        in_ch: 32
+        out_ch: 32
+        upsample: False
+        ksize: 3
+        stride: 1
+        pad: 1
+
+    finalblock3:
+      type: FullConv
+      args:
+        in_ch: 32
+        out_ch: 19
+        ksize: 2
+        pad: 0
+        stride: 2
+
+dataset:
+  train:
+    module: erfnet.data_util.cityscapes.cityscapes_transformed
+    name: CityscapesTransformedDataset
+    args:
+      data_dir: /home/enshu3/dataset/Cityscapes
+      label_resolution: gtFine
+      split: train
+      ignore_labels: true
+      crop_size: [512, 1024]
+      color_sigma: null
+      scale: [0.5, 2.0]
+      rotate: False
+      fliplr: True
+      n_class: 19
+      scale_label: 1
+
+  valid:
+    module: erfnet.data_util.cityscapes.cityscapes_transformed
+    name: CityscapesTransformedDataset
+    args:
+      data_dir: /home/enshu3/dataset/Cityscapes
+      label_resolution: gtFine
+      split: val
+      ignore_labels: true
+      crop_size: [512, 1024]
+      color_sigma: null
+      scale: null
+      rotate: False
+      fliplr: False
+      n_class: 19
+      scale_label: 1
+
+updater:
+  name: StandardUpdater #ParallelUpdater
+
+iterator:
+  name: MultiprocessIterator
+  train_batchsize: 8
+  test_batchsize: 8
+  args:
+    n_processes: 4
+    n_prefetch: 1
+    shared_mem: 8097152
+
+optimizer:
+  name: MomentumSGD
+  args:
+    lr: 0.001
+    momentum: 0.9
+  hook:
+    WeightDecay: 0.0002
+
+extension:
+  Evaluator:
+    name: SemanticSegmentationEvaluator
+    trigger: [1, 'epoch']
+  snapshot:
+      trigger: [2, "epoch"]
+  snapshot_object:
+      trigger: [2, "epoch"]
+  LogReport:
+    trigger: [1, "epoch"]
+  PrintReport:
+    name:
+      epoch
+      iteration
+      main/loss
+      validation/main/miou
+      validation/main/pixel_accuracy
+      validation/main/mean_class_accuracy
+      lr
+    trigger: [1, "epoch"]
+  ProgressBar:
+      update_interval: 10
+  observe_lr:
+  PolynomialShift:
+    trigger: [1, 'iteration']
+    args:
+      power: 0.9
