@@ -182,6 +182,33 @@ class InitialBlock(chainer.Chain):
         x = self.conv(x)
         return F.max_pooling_2d(x, self.psize, 2, self.ppad)
 
+class DownsamplerBlock(chainer.Chain):
+    """Downsampler Block"""
+    def __init__(self, in_ch=3, out_ch=13, ksize=3, stride=2, pad=1,
+                 nobias=False, use_bn=True, train=True):
+        super(DownsamplerBlock, self).__init__()
+        self.train = train
+        with self.init_scope():
+            self.conv = L.Convolution2D(in_ch, out_ch, ksize, stride,
+                                           pad=pad, nobias=nobias)
+            self.bn = L.BatchNormalization(out_ch + in_ch, eps=1e-3, decay=0.95)
+
+        def __call__(self, x):
+            with chainer.using_config('train', self.train):
+                h1 = self.conv(x)
+                h2 = F.max_pooling_2d(x, 2, 2)
+                h = F.concat((h1, h2), axis=1)
+                h = self.bn(h)
+                return F.relu(h)
+
+        def predict(self, x):
+            h1 = self.conv(x)
+            h2 = F.max_pooling_2d(x, 2, 2)
+            h = F.concat((h1, h2), axis=1)
+            h = self.bn(h)
+            return F.relu(h)
+
+
 
 class ResBacisBlock(chainer.Chain):
     """Basic block of ResNet18 and ResNet34"""
@@ -212,42 +239,7 @@ class ResBacisBlock(chainer.Chain):
             return F.relu(h1 + self.conv3(x))
         else:
             return F.relu(h1 + x)
-
-class ResBlock18(chainer.Chain):
-    """Initial Block"""
-    def __init__(self, use_bn=True, train=True):
-        super(ResBlock18, self).__init__()
-        self.train = train
-        with self.init_scope():
-            self.block1_1 = ResBacisBlock(64, 64, use_bn=use_bn)
-            self.block1_2 = ResBacisBlock(64, 64, use_bn=use_bn)
-            self.block2_1 = ResBacisBlock(64, 128, use_bn=use_bn,
-                                          downsample=True)
-            self.block2_2 = ResBacisBlock(128, 128, use_bn=use_bn)
-            self.block3_1 = ResBacisBlock(128, 256, use_bn=use_bn,
-                                          downsample=True)
-            self.block3_2 = ResBacisBlock(256, 256, use_bn=use_bn)
-            self.block4_1 = ResBacisBlock(256, 512, use_bn=use_bn,
-                                          downsample=True)
-            self.block4_2 = ResBacisBlock(512, 512, use_bn=use_bn)
-
-    def pytorch2chainer(path):
-        pass
-
-    def __call__(self, x):
-        with chainer.using_config('train', self.train):
-            h1 = self.block1_2(self.block1_1(x))
-            h2 = self.block2_2(self.block2_1(h1))
-            h3 = self.block3_2(self.block3_1(h2))
-            h4 = self.block4_2(self.block4_1(h3))
-            return h1, h2, h3, h4
-
-    def predict(self, x):
-        x = self.block1_2(self.block1_1(x))
-        x = self.block2_2(self.block2_1(x))
-        x = self.block3_2(self.block3_1(x))
-        return self.block4_2(self.block4_1(x))
-
+        
 
 class DecoderBlock(chainer.Chain):
     """DecoderBlock Abstract"""

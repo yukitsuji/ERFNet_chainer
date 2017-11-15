@@ -6,7 +6,7 @@
 # Bottlenecで対応可能なparamは、Defaultのみ
 # """
 end_trigger: [100000, "iteration"]
-results: results/paper_base
+results: results/enc_paper
 gpus: [1]
 mode: Train
 seed: 1
@@ -65,52 +65,14 @@ model:
         in_ch: 128
         dilated: [2, 4, 6, 8, 2, 4, 6, 8]
 
-    upsampling1:
-      type: ConvBNReLU
-      args:
-        in_ch: 128
-        out_ch: 64
-        upsample: True
-        ksize: 2
-        stride: 2
-        pad: 0
-
-    non_bottleneck2:
-      type: NonBottleneck1D
-      loop: 2
-      args:
-        in_ch: 64
-        drop_ratio: 0.2
-        use_bn: True
-        nobias: False
-
-    upsampling2:
-      type: ConvBNReLU
-      args:
-        in_ch: 64
-        out_ch: 16
-        upsample: True
-        ksize: 2
-        stride: 2
-        pad: 0
-
-    non_bottleneck3:
-      type: NonBottleneck1D
-      loop: 2
-      args:
-        in_ch: 16
-        drop_ratio: 0.2
-        use_bn: True
-        nobias: False
-
-    finalblock3:
+    fullconv:
       type: FullConv
       args:
-        in_ch: 16
+        in_ch: 32
         out_ch: 19
-        ksize: 2
-        pad: 0
-        stride: 2
+        ksize: 3
+        pad: 1
+        stride: 1
 
 dataset:
   train:
@@ -127,7 +89,7 @@ dataset:
       rotate: False
       fliplr: True
       n_class: 19
-      scale_label: 1
+      scale_label: 8
 
   valid:
     module: erfnet.data_util.cityscapes.cityscapes_transformed
@@ -143,7 +105,7 @@ dataset:
       rotate: False
       fliplr: False
       n_class: 19
-      scale_label: 1
+      scale_label: 8
 
 updater:
   name: StandardUpdater #ParallelUpdater

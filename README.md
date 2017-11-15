@@ -5,7 +5,7 @@ Real-time Semantic Segmentation [link](http://www.robesafe.uah.es/personal/eduar
 ```
 ######## Training by cityscapes ########
 # Calculate class balancing
-python calculate_class_weight.py [mean or loss] --base_dir data_dir --result name --source ./pretrained_model/data.txt --num_classes 19 --dataset [cityscapes or camvid]
+python calculate_class_weight.py [mean or loss] --base_dir data_dir --result name --source ./pretrained_model/data.txt --num_classes 19 --dataset [cityscapes or camvid] --log_value 1.2
 # Training encoder by cityscapes
 python train.py experiments/enc_dec_paper.yml
 
